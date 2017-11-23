@@ -8,7 +8,7 @@ public class Radar : MonoBehaviour
 	public List<GameObject> players = new List<GameObject> ();
 	public List<GameObject> groundTargets;
 	public List<GameObject> missiles = new List<GameObject> ();
-	public float maxDistance = 2000;
+	public float maxDistance = 200000;
 
 
 	void Start ()
@@ -24,10 +24,10 @@ public class Radar : MonoBehaviour
 			players.Clear ();
 			foreach (GameObject player in allplayers) {
 				PlayerSetup playerSetup = player.GetComponent<PlayerSetup> ();
-				if (!playerSetup.isLocalPlayer
-				    && Vector3.Distance (transform.position, player.transform.position) < maxDistance) {
+				if (!playerSetup.isLocalPlayer)
+				//    && Vector3.Distance (transform.position, player.transform.position) < maxDistance) {
 					players.Add (player);
-				}
+				// }
 			}
 		}
 
@@ -35,9 +35,9 @@ public class Radar : MonoBehaviour
 			GameObject[] allmissiles = GameObject.FindGameObjectsWithTag ("Missile");
 			missiles.Clear ();
 			foreach (GameObject missile in allmissiles) {
-				if (Vector3.Distance (transform.position, missile.transform.position) < maxDistance) {
+				// if (Vector3.Distance (transform.position, missile.transform.position) < maxDistance) {
 					missiles.Add (missile);
-				}
+				// }
 			}
 		}
 	}

@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System;
+
 public class AI : MonoBehaviour
 {
 	Radar radar;
@@ -19,6 +20,7 @@ public class AI : MonoBehaviour
     Socket sender;
 
 	public Vector3 desiredDirection;
+    public Vector3 safeRegion;
     public string url = "http://localhost:9999";
     public float lastSent;
 	void Start ()
@@ -32,7 +34,13 @@ public class AI : MonoBehaviour
 		playerInput = GetComponent<PlayerInput> ();
 
 		desiredDirection = transform.forward;
-        StartClient();
+        if (playerSetup.team == 1)
+        {
+            StartClient();
+        }
+
+        safeRegion = transform.position;
+        
 	}
 
     void StartClient()
@@ -86,24 +94,57 @@ public class AI : MonoBehaviour
         }
     }
 
-    void SendMessage()
+    void SendMessage1(string message)
     {
         byte[] bytes = new byte[1024];
         // Encode the data string into a byte array.
-        byte[] msg = Encoding.ASCII.GetBytes("This is a test<EOF>");
+        byte[] msg = Encoding.ASCII.GetBytes(message);
 
         // Send the data through the socket.
         int bytesSent = sender.Send(msg);
 
         // Receive the response from the remote device.
-        // int bytesRec = sender.Receive(bytes);
-        // Console.WriteLine("Echoed test = {0}",
-        //     Encoding.ASCII.GetString(bytes,0,bytesRec));
+        int bytesRec = sender.Receive(bytes);
+        Console.WriteLine("Echoed test = {0}",
+             Encoding.ASCII.GetString(bytes,0,bytesRec));
 
+    }
+    string GetPositions(List<GameObject> objects)
+    {
+        string result = "";
+        if (objects == null) return result;
+        Boolean first = true;
+        foreach(GameObject obj in objects)
+        {   if (obj != null)
+            {
+                if (!first)
+                    result = result + ",";
+                result += obj.transform.position.ToString();
+            }
+        }
+        return result;
+    }
+    string ConstructMessage()
+    {
+        // Debug.Log(GetPositions(radar.players));
+        //string message = string.Format("myPosition: {0}", "321");
+        Boolean safe = false;
+        if (Vector3.Distance(safeRegion, transform.position) <= 2000)
+        {
+            safe = true;
+        }
+        string message = "{";
+        message += string.Format("players: [{0}], missiles: [{1}], targetPosition: [{2}], myPosition: {3}, safe: {4}", GetPositions(radar.players), GetPositions(radar.missiles), GetPositions(targetSeeker.groundTargets), transform.position, safe.ToString());
+        message += "}";
+        return message;
     }
     void Update ()
 	{
-        SendMessage();
+        if (playerSetup.team == 1)
+        {
+            SendMessage1(ConstructMessage());
+        }
+        
         TurnBrakesOff ();
 
 		desiredDirection = Vector3.zero;
