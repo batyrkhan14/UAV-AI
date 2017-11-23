@@ -5,23 +5,22 @@ import numpy as np
 
 
 #List out our bandits. Currently bandit 4 (index#3) is set to most often provide a positive reward.
-bandits = [0.2,0,-0.2,-5]
-num_bandits = len(bandits)
-def pullBandit(bandit):
+# inputs = [0.2,0,-0.2,-5]
+actions = [1, 2, 3, 4, 5]
+# num_inputs = len(inputs)
+num_actions = len(actions)
+def getReward(input):
     #Get a random number.
-    result = np.random.randn(1)
-    if result > bandit:
-        #return a positive reward.
-        return 1
-    else:
-        #return a negative reward.
-        return -1
-
+    if (len(input['targetPosition']) == 0 and input['safe'] == 'True'):
+    	return 2;
+    if (len(input['targetPosition']) == 0):
+    	return 1;
+    return 0;
 
 tf.reset_default_graph()
 
 #These two lines established the feed-forward part of the network. This does the actual choosing.
-weights = tf.Variable(tf.ones([num_bandits]))
+weights = tf.Variable(tf.ones([num_actions]))
 chosen_action = tf.argmax(weights,0)
 
 #The next six lines establish the training proceedure. We feed the reward and chosen action into the network
@@ -35,19 +34,21 @@ update = optimizer.minimize(loss)
 
 
 total_episodes = 1000 #Set total number of episodes to train agent on.
-total_reward = np.zeros(num_bandits) #Set scoreboard for bandits to 0.
+total_reward = np.zeros(num_actions) #Set scoreboard for bandits to 0.
 e = 0.1 #Set the chance of taking a random action.
 
 init = tf.initialize_all_variables()
 
 def process(message):
-	pass
-
-
-
-
-
-
+	inputs = json.loads(message)
+	if (np.random.rand(1) < e):
+		action = np.random.randint(num_actions)
+	else:
+		action = sess.run(chosen_action)
+	reward = getReward(inputs)
+	_,resp,ww = sess.run([update,responsible_weight,weights], feed_dict={reward_holder:[reward],action_holder:[action]})
+	total_reward[action] += reward
+	return str(action)
 
 
 sock = socket.socket()
@@ -56,14 +57,17 @@ sock.listen(1)
 conn, addr = sock.accept()
 
 print ('connected:', addr)
+with tf.Session() as sess:
+    sess.run(init)
+    while True:
+	    data = conn.recv(1024)
+	    if not data:
+	        break
+	    # print(str(data))
+	    response = process(data)
+	    print(response)
+	    conn.send(response.encode())
 
-while True:
-    data = conn.recv(1024)
-    if not data:
-        break
-    print(str(data))
-    response = process(data)
-    conn.send(data)
 
 
 

@@ -7,7 +7,6 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System;
-
 public class AI : MonoBehaviour
 {
 	Radar radar;
@@ -94,7 +93,7 @@ public class AI : MonoBehaviour
         }
     }
 
-    void SendMessage1(string message)
+    string SendMessage1(string message)
     {
         byte[] bytes = new byte[1024];
         // Encode the data string into a byte array.
@@ -107,7 +106,8 @@ public class AI : MonoBehaviour
         int bytesRec = sender.Receive(bytes);
         Console.WriteLine("Echoed test = {0}",
              Encoding.ASCII.GetString(bytes,0,bytesRec));
-
+        bytes[bytesRec] = 0;
+        return System.Text.Encoding.Default.GetString(bytes);
     }
     string GetPositions(List<GameObject> objects)
     {
@@ -119,7 +119,8 @@ public class AI : MonoBehaviour
             {
                 if (!first)
                     result = result + ",";
-                result += obj.transform.position.ToString();
+                result += "\"" + obj.transform.position.ToString() + "\"";
+                first = false;
             }
         }
         return result;
@@ -134,33 +135,61 @@ public class AI : MonoBehaviour
             safe = true;
         }
         string message = "{";
-        message += string.Format("players: [{0}], missiles: [{1}], targetPosition: [{2}], myPosition: {3}, safe: {4}", GetPositions(radar.players), GetPositions(radar.missiles), GetPositions(targetSeeker.groundTargets), transform.position, safe.ToString());
+        message += string.Format("\"players\": [{0}], \"missiles\": [{1}], \"targetPosition\": [{2}], \"myPosition\": \"{3}\", \"safe\": \"{4}\"", GetPositions(radar.players), GetPositions(radar.missiles), GetPositions(targetSeeker.groundTargets), transform.position, safe.ToString());
         message += "}";
         return message;
     }
     void Update ()
 	{
+        TurnBrakesOff();
         if (playerSetup.team == 1)
         {
-            SendMessage1(ConstructMessage());
+            string response = SendMessage1(ConstructMessage());
+            int action = Int32.Parse(response);
+            if (action == 0)
+            {
+                playerInput.inputRoll += 100;
+            }
+            else if (action == 1)
+            {
+                playerInput.inputPitch += 100;
+            }
+            else if (action == 2)
+            {
+                playerInput.inputRoll -= 100;
+            }
+            else if (action == 3)
+            {
+                playerInput.inputPitch -= 100;
+            }
+            else if (action == 4)
+            {
+                playerInput.inputFire = true;
+            }
+            playerInput.inputToggleBrakes = true;
         }
-        
-        TurnBrakesOff ();
+        else
+        {
 
-		desiredDirection = Vector3.zero;
-		if (targetSeeker.target) {
-			desiredDirection += Seek ();
-		} else {
-			desiredDirection += Wander ();
-		}
-		desiredDirection += StickAroundFriendlyGroundTargets ();
-		desiredDirection += AvoidCollision ();
-		desiredDirection += KeepAltitude ();
-		desiredDirection.Normalize ();
-		Attack ();
-		Turn ();
+            desiredDirection = Vector3.zero;
+            if (targetSeeker.target)
+            {
+                desiredDirection += Seek();
+            }
+            else
+            {
+                desiredDirection += Wander();
+            }
+            desiredDirection += StickAroundFriendlyGroundTargets();
+            desiredDirection += AvoidCollision();
+            desiredDirection += KeepAltitude();
+            desiredDirection.Normalize();
+            Attack();
+            Turn();
+        }
 
-		DebugDraw ();
+
+        DebugDraw ();
 	}
 
 
